@@ -1,5 +1,3 @@
 {
-  "intro": {
-    "title": "Benvenuto in React!"
-  }
+  "intro-title": "Benvenuto in React!"
 }

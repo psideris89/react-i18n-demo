@@ -100,7 +100,13 @@ const Flag = () => {
 export default Flag;
 ```
 
-At this point our project template is completed and you will be able to update the language from the dropdown. However the message and the flag are not updated as they are hardcoded for now. The next step is to integrate with i18next in order to render the content dynamically.
+At this point our project template is completed and you will be able to update the language from the dropdown. Let's go ahead and run the application.
+
+```
+$ npm start
+```
+
+The message and the flag are not updated as they are hardcoded for now so the next step is to integrate with i18next in order to render the content dynamically.
 
 # i18n integration
 
@@ -144,6 +150,22 @@ export default i18n;
 We chose to initialise with English which is also the fallback language but you could specify another, as well as, pre-load multiple languages. As we want to use the local storage in order to save the language in our website, we also need to give priority to that during the detection. Bare in mind that you can add more than one detectors, even custom ones.
 
 <u>Note</u>: When a new language is set in i18next the relevant properties will be loaded in the memory. You can view that in the console if you have the debug enabled.
+
+Next import i18n.js in the index.js
+
+```javascript
+import React from 'react';
+import ReactDOM from 'react-dom';
+import './index.css';
+import App from './App';
+import * as serviceWorker from './serviceWorker';
+
+import './i18n';
+
+ReactDOM.render(<App />, document.getElementById('root'));
+
+serviceWorker.unregister();
+```
 
 At this point you will be able see the i18next initialisation in the console.
 
@@ -236,7 +258,7 @@ import { useTranslation } from 'react-i18next';
 const Intro = () => {
   const { t } = useTranslation();
 
-  return <h1>{t('intro.title')}</h1>;
+  return <h1>{t('intro-title')}</h1>;
 };
 
 export default Intro;
@@ -259,7 +281,7 @@ const Flag = () => {
 export default Flag;
 ```
 
-At this point the Flag rendering should be working however the message has changed to <i>intro.title</i>. This is an indication that the i18next failed to read the value of this property.
+At this point the Flag rendering should be working however the message has changed to <i>intro-title</i>. This is an indication that the i18next failed to read the value of this property.
 
 ![property not rendering](screenshots/property_name.png)
 
@@ -271,18 +293,108 @@ This is my translation file for English language.
 
 ```javascript
 {
-  "intro": {
-    "title": "Welcome to React!"
-  }
+  "intro-title": "Welcome to React!"
 }
 ```
 
 Go ahead and create the other translation files!
 
-At this point the application renders the proper messages and images but you might have noticed a bag. When you refresh the page even though the language might not be English the dropdown always displays that. To fix that just initialise the Language state based on the local storage.
+At this point the application renders the proper messages and images but you might have noticed a bag. When you refresh the page, the dropdown is always initialised to English. To fix that we can initialise the dropdownLang in Language.js based on the local storage.
 
 ```javascript
 const [dropdownLang, setDropdownLang] = useState(i18n.language || 'en');
 ```
 
 # Adding multi-page experience
+
+For that we need to install the react-router-dom library.
+
+```
+$ npm install --save react-router-dom
+```
+
+The first step is to use the BrowserRouter component from react-router-dom and create a route for the App component. This gives us access to the history object which will be used to manipulate the url when we select a language from the dropdown.
+
+```javascript
+import React from 'react';
+import ReactDOM from 'react-dom';
+import './index.css';
+import App from './App';
+import { BrowserRouter, Route } from 'react-router-dom';
+
+import * as serviceWorker from './serviceWorker';
+
+import './i18n';
+
+ReactDOM.render(
+  <BrowserRouter>
+    <Route path="/" component={App} />
+  </BrowserRouter>,
+  document.getElementById('root')
+);
+
+serviceWorker.unregister();
+```
+
+So now let's update the Language component to update the url on language switching. For that we need to use the <b>useHistory</b> hook from <b>react-router-dom</b> that allows us to access the history object. Then we update our handler to push to history the new url.
+
+```javascript
+import { FormControl, MenuItem, Select } from '@material-ui/core';
+import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useHistory } from 'react-router-dom';
+
+const Language = () => {
+  const history = useHistory();
+  const { i18n } = useTranslation();
+  const [dropdownLang, setDropdownLang] = useState(i18n.language || 'en');
+
+  const languageHandler = event => {
+    const newLanguage = event.target.value;
+    if (dropdownLang !== newLanguage) {
+      setDropdownLang(newLanguage);
+      i18n.changeLanguage(newLanguage);
+      history.push("/" + newLanguage);
+    }
+  };
+
+  return (
+    <FormControl style={{ minWidth: 120 }}>
+      <Select value= {dropdownLang} onChange={languageHandler}>
+        <MenuItem value="en">English</MenuItem>
+        <MenuItem value="el">Ελληνικά</MenuItem>
+        <MenuItem value="es">Español</MenuItem>
+        <MenuItem value="it">Italiano</MenuItem>
+      </Select>
+    </FormControl>
+  );
+};
+
+export default Language;
+```
+
+Let's go back to our browser to test the application. You will notice that whenever you switch language from the dropdown you get a new url! This is great but still there is some functionality missing related to prioritising the language in the url over the local storage. In order to test that you can try to manually update the url (localhost:3000/en -> localhost:3000/es), as you can see the language in the site is not updated. To solve that issue we can add another detector in the i18next configuration. The name of the detector is <b>path</b> and is responsible for extracting the language from the url (from the path and not from query string).
+
+Let's update the detection property in i18n.js
+
+```
+detection: {
+  order: ['path', 'localStorage']
+}
+```
+
+Now if you try the previous scenario you will see that the language is updated!
+
+Note: You might want to refactor the way you retrieve the svg in the Flag component, otherwise you will get an error for non supported language urls (e.g. localhost:3000/pt).
+
+Tricks:
+- You could add a Redirect inside the BrowserRouter in order to check if the local storage contains a value and if then to automatically reconcile the url. That's the case where your local storage contains a language but you have bookmarked the root url of the application.
+
+- You could create your own custom detector and add it in the i18next configuration. The i18next-browser-languagedetector supports a vast majority of detectors but in case you need something more customised you can have it.
+
+Author
+Panagiotis
+Sideris
+
+Twitter:
+@Psideris_

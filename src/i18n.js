@@ -14,7 +14,7 @@ i18n
     debug: true,
     lowerCaseLng: true,
     detection: {
-      order: ['localStorage']
+      order: ['path', 'localStorage']
     }
   });
 
